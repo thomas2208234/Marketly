@@ -8,8 +8,9 @@ import { Watchlist, type WatchlistItem } from './watchlist'
 import { SymbolDetail } from './symbol-detail'
 import { MarketTable } from './market-table'
 import { NewsFeed } from './news-feed'
+import { BuzzPicks } from './buzz-picks'
 
-type Tab = 'news' | 'watchlist'
+type Tab = 'buzz' | 'news' | 'watchlist'
 
 type MarketAppProps = {
   initialTickers: Ticker[]
@@ -20,7 +21,7 @@ type MarketAppProps = {
 export function MarketApp({ initialTickers, initialWatchlist, initialError }: MarketAppProps) {
   const { tickers, error, updatedAt } = useLiveTickers(initialTickers)
   const [watchlist, setWatchlist] = useState(initialWatchlist)
-  const [tab, setTab] = useState<Tab>('news')
+  const [tab, setTab] = useState<Tab>('buzz')
   const [selected, setSelected] = useState(initialWatchlist[0] ?? initialTickers[0]?.symbol ?? '')
   const errorMessage = error?.message ?? (tickers.length === 0 ? initialError : null)
 
@@ -36,6 +37,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
   const toggle = (symbol: string) => (watchlist.includes(symbol) ? remove(symbol) : add(symbol))
 
   const tabs: { id: Tab; label: string }[] = [
+    { id: 'buzz', label: 'Buzz picks' },
     { id: 'news', label: 'Stock news' },
     { id: 'watchlist', label: 'Watchlist' },
   ]
@@ -43,7 +45,9 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
   function onTabKeyDown(e: React.KeyboardEvent) {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     e.preventDefault()
-    const next = tab === 'news' ? 'watchlist' : 'news'
+    const index = tabs.findIndex((t) => t.id === tab)
+    const step = e.key === 'ArrowRight' ? 1 : -1
+    const next = tabs[(index + step + tabs.length) % tabs.length].id
     setTab(next)
     document.getElementById(`tab-${next}`)?.focus()
   }
@@ -99,6 +103,16 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
           {errorMessage}
         </p>
       )}
+
+      <main
+        id="panel-buzz"
+        role="tabpanel"
+        aria-labelledby="tab-buzz"
+        hidden={tab !== 'buzz'}
+        className="mx-auto w-full max-w-3xl px-5 py-6 md:px-8 md:py-8"
+      >
+        <BuzzPicks tickers={tickers} />
+      </main>
 
       <main
         id="panel-news"
