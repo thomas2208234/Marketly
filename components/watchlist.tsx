@@ -6,8 +6,10 @@ import clsx from 'clsx'
 import { changeOf, formatPrice, formatSigned, type Ticker } from '@/lib/market'
 import { Sparkline } from './sparkline'
 
+export type WatchlistItem = { symbol: string; name: string; ticker?: Ticker }
+
 type WatchlistProps = {
-  tickers: Ticker[]
+  items: WatchlistItem[]
   universe: Ticker[]
   selected: string
   onSelect: (symbol: string) => void
@@ -15,10 +17,10 @@ type WatchlistProps = {
   onRemove: (symbol: string) => void
 }
 
-export function Watchlist({ tickers, universe, selected, onSelect, onAdd, onRemove }: WatchlistProps) {
+export function Watchlist({ items, universe, selected, onSelect, onAdd, onRemove }: WatchlistProps) {
   const [query, setQuery] = useState('')
   const searchId = useId()
-  const watched = new Set(tickers.map((t) => t.symbol))
+  const watched = new Set(items.map((t) => t.symbol))
   const q = query.trim().toLowerCase()
   const suggestions = q
     ? universe
@@ -40,7 +42,7 @@ export function Watchlist({ tickers, universe, selected, onSelect, onAdd, onRemo
       <div className="flex flex-col gap-3 border-b px-5 pt-5 pb-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold tracking-wide uppercase">Watchlist</h2>
-          <span className="font-mono text-xs text-muted-foreground tabular">{tickers.length} symbols</span>
+          <span className="font-mono text-xs text-muted-foreground tabular">{items.length} symbols</span>
         </div>
 
         <form
@@ -88,14 +90,15 @@ export function Watchlist({ tickers, universe, selected, onSelect, onAdd, onRemo
         <span className="w-24 text-right">Last / Chg</span>
       </div>
 
-      {tickers.length === 0 ? (
+      {items.length === 0 ? (
         <p className="px-5 py-8 text-sm leading-relaxed text-muted-foreground">
           Your watchlist is empty. Search above to add a symbol.
         </p>
       ) : (
         <ul className="flex-1 overflow-y-auto pb-4">
-          {tickers.map((t) => {
-            const { percent } = changeOf(t)
+          {items.map((t) => {
+            const quote = t.ticker
+            const percent = quote ? changeOf(quote).percent : 0
             const up = percent >= 0
             const isSelected = t.symbol === selected
             return (
@@ -113,11 +116,22 @@ export function Watchlist({ tickers, universe, selected, onSelect, onAdd, onRemo
                     <span className="font-mono text-sm font-semibold">{t.symbol}</span>
                     <span className="truncate text-xs text-muted-foreground">{t.name}</span>
                   </span>
-                  <Sparkline values={t.history.slice(-24)} positive={up} />
-                  <span className="flex w-24 flex-col items-end font-mono tabular">
-                    <span className="text-sm">{formatPrice(t.price)}</span>
-                    <span className={clsx('text-xs', up ? 'text-gain' : 'text-loss')}>{formatSigned(percent)}%</span>
-                  </span>
+                  {quote ? (
+                    <>
+                      <Sparkline values={quote.history.slice(-24)} positive={up} />
+                      <span className="flex w-24 flex-col items-end font-mono tabular">
+                        <span className="text-sm">{formatPrice(quote.price)}</span>
+                        <span className={clsx('text-xs', up ? 'text-gain' : 'text-loss')}>{formatSigned(percent)}%</span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="flex w-24 flex-col items-end font-mono text-muted-foreground">
+                      <span className="text-sm" aria-hidden="true">
+                        {'—'}
+                      </span>
+                      <span className="text-xs">Loading</span>
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
