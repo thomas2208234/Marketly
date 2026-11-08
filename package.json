@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "ai": "^7.0.165",
     "clsx": "^2.1.1",
     "lucide-react": "^1.70.0",
     "next": "^16.4.5",
@@ -15,7 +16,8 @@
     "react-dom": "^19.3.1",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
-    "swr": "^2.5.1"
+    "swr": "^2.5.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.5",
