@@ -4,13 +4,13 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import clsx from 'clsx'
 import { changeOf, formatPrice, formatSigned, type Ticker } from '@/lib/market'
 
+const SESSION_LABELS = ['Prev close', 'Open']
+
 export function SymbolDetail({ ticker }: { ticker: Ticker }) {
   const { change, percent } = changeOf(ticker)
   const up = change >= 0
   const color = up ? 'var(--gain)' : 'var(--loss)'
-  const data = ticker.history.map((price, i) => ({ day: i - ticker.history.length + 1, price }))
-  const high = Math.max(...ticker.history)
-  const low = Math.min(...ticker.history)
+  const data = ticker.history.map((price, i) => ({ day: i, price }))
 
   return (
     <section aria-labelledby="detail-heading" className="flex flex-col gap-6 rounded-lg border bg-card p-5 md:p-6">
@@ -59,8 +59,8 @@ export function SymbolDetail({ ticker }: { ticker: Ticker }) {
                 fontFamily: 'var(--font-mono)',
                 fontSize: 12,
               }}
-              labelFormatter={(d) => (Number(d) === 0 ? 'Today' : `${Math.abs(Number(d))}d ago`)}
-              formatter={(v) => [`$${formatPrice(Number(v))}`, 'Close']}
+              labelFormatter={(i) => SESSION_LABELS[Number(i)] ?? 'Live'}
+              formatter={(v) => [`$${formatPrice(Number(v))}`, 'Price']}
             />
             <Area
               type="monotone"
@@ -77,9 +77,9 @@ export function SymbolDetail({ ticker }: { ticker: Ticker }) {
       <dl className="grid grid-cols-2 gap-4 border-t pt-4 font-mono text-sm tabular md:grid-cols-4">
         {[
           ['Prev close', formatPrice(ticker.previousClose)],
-          ['60d high', formatPrice(high)],
-          ['60d low', formatPrice(low)],
-          ['60d range', `${(((high - low) / low) * 100).toFixed(1)}%`],
+          ['Open', formatPrice(ticker.open)],
+          ['Day high', formatPrice(ticker.high)],
+          ['Day low', formatPrice(ticker.low)],
         ].map(([label, value]) => (
           <div key={label} className="flex flex-col gap-1">
             <dt className="font-sans text-xs text-muted-foreground">{label}</dt>
