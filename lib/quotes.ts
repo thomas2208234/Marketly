@@ -1,5 +1,5 @@
 import 'server-only'
-import { UNIVERSE, type Ticker } from './market'
+import { DEFAULT_WATCHLIST, UNIVERSE, type Ticker } from './market'
 
 type TwelveDataQuote = {
   symbol: string
@@ -19,6 +19,11 @@ export class QuotesError extends Error {}
 // so symbols are refreshed in round-robin batches that stay inside that budget.
 const CREDITS_PER_MINUTE = Math.max(1, Number(process.env.TWELVE_DATA_CREDITS_PER_MINUTE) || 8)
 const BATCH_SIZE = Math.min(CREDITS_PER_MINUTE, UNIVERSE.length)
+// Default watchlist symbols go first so the starter watchlist fills in on the first batch.
+const FETCH_ORDER = [
+  ...DEFAULT_WATCHLIST.filter((s) => UNIVERSE.some((u) => u.symbol === s)),
+  ...UNIVERSE.map((u) => u.symbol).filter((s) => !DEFAULT_WATCHLIST.includes(s)),
+]
 const BATCH_INTERVAL_MS = Math.max(15_000, Math.ceil((60_000 * BATCH_SIZE) / CREDITS_PER_MINUTE))
 
 const cache = new Map<string, Ticker>()
@@ -69,10 +74,10 @@ async function fetchBatch(symbols: string[], apiKey: string) {
 }
 
 async function refreshNextBatch(apiKey: string) {
-  const symbols = Array.from({ length: BATCH_SIZE }, (_, i) => UNIVERSE[(cursor + i) % UNIVERSE.length].symbol)
+  const symbols = Array.from({ length: BATCH_SIZE }, (_, i) => FETCH_ORDER[(cursor + i) % FETCH_ORDER.length])
   lastBatchAt = Date.now()
   await fetchBatch(symbols, apiKey)
-  cursor = (cursor + BATCH_SIZE) % UNIVERSE.length
+  cursor = (cursor + BATCH_SIZE) % FETCH_ORDER.length
 }
 
 export async function getQuotes(): Promise<Ticker[]> {

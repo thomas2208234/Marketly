@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import clsx from 'clsx'
-import type { Ticker } from '@/lib/market'
+import { UNIVERSE, type Ticker } from '@/lib/market'
 import { useLiveTickers } from './use-live-tickers'
-import { Watchlist } from './watchlist'
+import { Watchlist, type WatchlistItem } from './watchlist'
 import { SymbolDetail } from './symbol-detail'
 import { MarketTable } from './market-table'
 import { NewsFeed } from './news-feed'
@@ -25,7 +25,10 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
   const errorMessage = error?.message ?? (tickers.length === 0 ? initialError : null)
 
   const bySymbol = new Map(tickers.map((t) => [t.symbol, t]))
-  const watchedTickers = watchlist.map((s) => bySymbol.get(s)).filter((t): t is Ticker => Boolean(t))
+  const watchedItems: WatchlistItem[] = watchlist.flatMap((symbol) => {
+    const meta = UNIVERSE.find((u) => u.symbol === symbol)
+    return meta ? [{ symbol, name: meta.name, ticker: bySymbol.get(symbol) }] : []
+  })
   const selectedTicker = bySymbol.get(selected) ?? tickers[0]
 
   const add = (symbol: string) => setWatchlist((list) => (list.includes(symbol) ? list : [...list, symbol]))
@@ -82,7 +85,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
                 {t.label}
                 {t.id === 'watchlist' && (
                   <span className="rounded bg-muted px-1.5 font-mono text-xs tabular text-muted-foreground">
-                    {watchedTickers.length}
+                    {watchedItems.length}
                   </span>
                 )}
               </button>
@@ -115,7 +118,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
         className={clsx('flex-1 flex-col lg:flex-row', tab === 'watchlist' ? 'flex' : 'hidden')}
       >
         <Watchlist
-          tickers={watchedTickers}
+          items={watchedItems}
           universe={tickers}
           selected={selected}
           onSelect={setSelected}
