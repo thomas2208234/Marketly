@@ -1,5 +1,6 @@
 import 'server-only'
 import { DEFAULT_WATCHLIST, UNIVERSE, type Ticker } from './market'
+import { available, CREDITS_PER_MINUTE, isPriorityHeld, spend } from './credits'
 
 type TwelveDataQuote = {
   symbol: string
@@ -17,7 +18,6 @@ export class QuotesError extends Error {}
 
 // Twelve Data bills 1 credit per symbol. The free plan allows 8 credits/minute,
 // so symbols are refreshed in round-robin batches that stay inside that budget.
-const CREDITS_PER_MINUTE = Math.max(1, Number(process.env.TWELVE_DATA_CREDITS_PER_MINUTE) || 8)
 const BATCH_SIZE = Math.min(CREDITS_PER_MINUTE, UNIVERSE.length)
 // Default watchlist symbols go first so the starter watchlist fills in on the first batch.
 const FETCH_ORDER = [
@@ -77,6 +77,7 @@ async function fetchBatch(symbols: string[], apiKey: string) {
 async function refreshNextBatch(apiKey: string) {
   const symbols = Array.from({ length: BATCH_SIZE }, (_, i) => FETCH_ORDER[(cursor + i) % FETCH_ORDER.length])
   lastBatchAt = Date.now()
+  spend(symbols.length)
   await fetchBatch(symbols, apiKey)
   cursor = (cursor + BATCH_SIZE) % FETCH_ORDER.length
 }
@@ -85,7 +86,8 @@ export async function getQuotes(): Promise<Ticker[]> {
   const apiKey = process.env.TWELVE_DATA_API_KEY
   if (!apiKey) throw new QuotesError('TWELVE_DATA_API_KEY is not set.')
 
-  if (!inflight && Date.now() - lastBatchAt >= BATCH_INTERVAL_MS) {
+  const canSpend = cache.size === 0 || (!isPriorityHeld() && available() >= BATCH_SIZE)
+  if (!inflight && canSpend && Date.now() - lastBatchAt >= BATCH_INTERVAL_MS) {
     inflight = refreshNextBatch(apiKey).finally(() => {
       inflight = null
     })
