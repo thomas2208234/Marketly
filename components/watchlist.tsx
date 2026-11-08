@@ -35,7 +35,7 @@ export function Watchlist({ tickers, universe, selected, onSelect, onAdd, onRemo
   return (
     <aside
       aria-label="Watchlist"
-      className="flex w-full flex-col border-t bg-card lg:sticky lg:top-0 lg:h-dvh lg:w-80 lg:shrink-0 lg:border-t-0 lg:border-l xl:w-96"
+      className="flex w-full flex-col border-t bg-card lg:sticky lg:top-0 lg:h-dvh lg:w-80 lg:shrink-0 lg:border-t-0 lg:border-r xl:w-96"
     >
       <div className="flex flex-col gap-3 border-b px-5 pt-5 pb-4">
         <div className="flex items-baseline justify-between">
