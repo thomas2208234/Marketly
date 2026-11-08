@@ -27,6 +27,7 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-gain: var(--gain);
   --color-loss: var(--loss);
+  --color-signal-foreground: var(--primary-foreground);
   --radius-lg: var(--radius);
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;

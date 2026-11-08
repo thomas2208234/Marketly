@@ -85,11 +85,6 @@ export function Watchlist({ items, universe, selected, onSelect, onAdd, onRemove
         </form>
       </div>
 
-      <div className="flex px-5 py-2 text-xs text-muted-foreground">
-        <span className="flex-1">Symbol</span>
-        <span className="w-24 text-right">Last / Chg</span>
-      </div>
-
       {items.length === 0 ? (
         <p className="px-5 py-8 text-sm leading-relaxed text-muted-foreground">
           Your watchlist is empty. Search above to add a symbol.
@@ -108,30 +103,45 @@ export function Watchlist({ items, universe, selected, onSelect, onAdd, onRemove
                   onClick={() => onSelect(t.symbol)}
                   aria-current={isSelected ? 'true' : undefined}
                   className={clsx(
-                    'flex w-full items-center gap-3 border-l-2 py-3 pr-5 pl-[18px] text-left transition-colors focus-visible:bg-muted focus-visible:outline-none',
-                    isSelected ? 'border-primary bg-muted' : 'border-transparent hover:bg-muted/60',
+                    'flex w-full items-center gap-3 px-5 text-left transition-colors focus-visible:bg-muted focus-visible:outline-none',
+                    isSelected ? 'bg-muted' : 'hover:bg-muted/60',
                   )}
                 >
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="font-mono text-sm font-semibold">{t.symbol}</span>
-                    <span className="truncate text-xs text-muted-foreground">{t.name}</span>
-                  </span>
-                  {quote ? (
-                    <>
-                      <Sparkline values={quote.history.slice(-24)} positive={up} />
-                      <span className="flex w-24 flex-col items-end font-mono tabular">
-                        <span className="text-sm">{formatPrice(quote.price)}</span>
-                        <span className={clsx('text-xs', up ? 'text-gain' : 'text-loss')}>{formatSigned(percent)}%</span>
-                      </span>
-                    </>
-                  ) : (
-                    <span className="flex w-24 flex-col items-end font-mono text-muted-foreground">
-                      <span className="text-sm" aria-hidden="true">
-                        {'—'}
-                      </span>
-                      <span className="text-xs">Loading</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-3 border-b py-3 group-last:border-b-0">
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="text-base leading-tight font-bold tracking-tight">{t.symbol}</span>
+                      <span className="truncate text-xs leading-tight text-muted-foreground">{t.name}</span>
                     </span>
-                  )}
+                    {quote ? (
+                      <>
+                        <Sparkline
+                          values={quote.history.slice(-30)}
+                          baseline={quote.previousClose}
+                          positive={up}
+                          width={60}
+                          height={30}
+                        />
+                        <span className="flex w-20 shrink-0 flex-col items-end gap-1 tabular">
+                          <span className="text-sm leading-none font-semibold">{formatPrice(quote.price)}</span>
+                          <span
+                            className={clsx(
+                              'w-full rounded-md py-0.5 text-center text-xs font-semibold text-signal-foreground',
+                              up ? 'bg-gain' : 'bg-loss',
+                            )}
+                          >
+                            {formatSigned(percent)}%
+                          </span>
+                        </span>
+                      </>
+                    ) : (
+                      <span className="flex w-20 shrink-0 flex-col items-end gap-1 text-muted-foreground">
+                        <span className="text-sm leading-none" aria-hidden="true">
+                          {'—'}
+                        </span>
+                        <span className="w-full rounded-md bg-muted py-0.5 text-center text-xs">Loading</span>
+                      </span>
+                    )}
+                  </span>
                 </button>
                 <button
                   type="button"
