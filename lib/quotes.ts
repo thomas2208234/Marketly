@@ -18,7 +18,8 @@ export class QuotesError extends Error {}
 // Twelve Data bills 1 credit per symbol. The free plan allows 8 credits/minute,
 // so symbols are refreshed in round-robin batches that stay inside that budget.
 const CREDITS_PER_MINUTE = Math.max(1, Number(process.env.TWELVE_DATA_CREDITS_PER_MINUTE) || 8)
-const BATCH_SIZE = Math.min(CREDITS_PER_MINUTE, UNIVERSE.length)
+// Leave one credit of headroom so a stray request can't push a batch over the limit.
+const BATCH_SIZE = Math.min(Math.max(1, CREDITS_PER_MINUTE - 1), UNIVERSE.length)
 // Default watchlist symbols go first so the starter watchlist fills in on the first batch.
 const FETCH_ORDER = [
   ...DEFAULT_WATCHLIST.filter((s) => UNIVERSE.some((u) => u.symbol === s)),
@@ -26,10 +27,26 @@ const FETCH_ORDER = [
 ]
 const BATCH_INTERVAL_MS = Math.max(15_000, Math.ceil((60_000 * BATCH_SIZE) / CREDITS_PER_MINUTE))
 
-const cache = new Map<string, Ticker>()
-let cursor = 0
-let lastBatchAt = 0
-let inflight: Promise<void> | null = null
+const RATE_LIMIT_BACKOFF_MS = 61_000
+
+type QuoteState = {
+  cache: Map<string, Ticker>
+  cursor: number
+  nextBatchAt: number
+  inflight: Promise<void> | null
+}
+
+// Kept on globalThis so dev-server hot reloads don't wipe the cache and re-spend credits.
+const globalForQuotes = globalThis as typeof globalThis & { __twelveDataQuotes?: QuoteState }
+const state: QuoteState = (globalForQuotes.__twelveDataQuotes ??= {
+  cache: new Map(),
+  cursor: 0,
+  nextBatchAt: 0,
+  inflight: null,
+})
+const cache = state.cache
+
+class RateLimitError extends QuotesError {}
 
 function isError(value: unknown): value is TwelveDataError {
   return typeof value === 'object' && value !== null && (value as TwelveDataError).status === 'error'
@@ -61,7 +78,7 @@ async function fetchBatch(symbols: string[], apiKey: string) {
   const body: unknown = await res.json()
   if (isError(body)) {
     if (body.code === 401 || body.code === 403) throw new QuotesError('Twelve Data rejected the API key.')
-    if (body.code === 429) throw new QuotesError('Twelve Data credit limit reached. Retrying shortly.')
+    if (body.code === 429) throw new RateLimitError('Twelve Data credit limit reached. Retrying shortly.')
     throw new QuotesError(body.message)
   }
 
@@ -74,25 +91,34 @@ async function fetchBatch(symbols: string[], apiKey: string) {
 }
 
 async function refreshNextBatch(apiKey: string) {
-  const symbols = Array.from({ length: BATCH_SIZE }, (_, i) => FETCH_ORDER[(cursor + i) % FETCH_ORDER.length])
-  lastBatchAt = Date.now()
-  await fetchBatch(symbols, apiKey)
-  cursor = (cursor + BATCH_SIZE) % FETCH_ORDER.length
+  const symbols = Array.from(
+    { length: BATCH_SIZE },
+    (_, i) => FETCH_ORDER[(state.cursor + i) % FETCH_ORDER.length],
+  )
+  state.nextBatchAt = Date.now() + BATCH_INTERVAL_MS
+  try {
+    await fetchBatch(symbols, apiKey)
+  } catch (error) {
+    // The per-minute window resets on Twelve Data's clock, so wait a full window before retrying.
+    if (error instanceof RateLimitError) state.nextBatchAt = Date.now() + RATE_LIMIT_BACKOFF_MS
+    throw error
+  }
+  state.cursor = (state.cursor + BATCH_SIZE) % FETCH_ORDER.length
 }
 
 export async function getQuotes(): Promise<Ticker[]> {
   const apiKey = process.env.TWELVE_DATA_API_KEY
   if (!apiKey) throw new QuotesError('TWELVE_DATA_API_KEY is not set.')
 
-  if (!inflight && Date.now() - lastBatchAt >= BATCH_INTERVAL_MS) {
-    inflight = refreshNextBatch(apiKey).finally(() => {
-      inflight = null
+  if (!state.inflight && Date.now() >= state.nextBatchAt) {
+    state.inflight = refreshNextBatch(apiKey).finally(() => {
+      state.inflight = null
     })
   }
 
-  if (inflight) {
+  if (state.inflight) {
     try {
-      await inflight
+      await state.inflight
     } catch (error) {
       if (cache.size === 0) throw error
       console.error('[quotes] Serving cached quotes after refresh failure:', error)
