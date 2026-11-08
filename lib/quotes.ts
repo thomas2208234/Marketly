@@ -56,6 +56,7 @@ function toTicker(quote: TwelveDataQuote): Ticker | null {
 async function fetchBatch(symbols: string[], apiKey: string) {
   const url = `https://api.twelvedata.com/quote?symbol=${symbols.map(encodeURIComponent).join(',')}&apikey=${apiKey}`
   const res = await fetch(url, { cache: 'no-store' })
+  if (res.status === 429) throw new QuotesError('Twelve Data credit limit reached. Retrying shortly.')
   if (!res.ok) throw new QuotesError(`Twelve Data request failed (${res.status}).`)
 
   const body: unknown = await res.json()
