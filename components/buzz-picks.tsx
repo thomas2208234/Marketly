@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import clsx from 'clsx'
 import { ArrowUpRight, Clock, Globe, Play, TrendingUp, Music2 } from 'lucide-react'
 import { changeOf, formatSigned, type Ticker } from '@/lib/market'
+import { BuzzChart, type PricePoint } from './buzz-chart'
 
 type Platform = 'web' | 'youtube' | 'tiktok'
 
@@ -25,6 +26,13 @@ async function fetchPicks(url: string): Promise<PicksReport> {
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'Could not load picks.')
   return body
+}
+
+async function fetchHistory(url: string): Promise<Record<string, PricePoint[]>> {
+  const res = await fetch(url)
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Could not load price history.')
+  return body.history
 }
 
 const PLATFORMS: { id: Platform; label: string; Icon: typeof Globe }[] = [
@@ -57,7 +65,17 @@ function BuzzMeter({ label, value, Icon }: { label: string; value: number; Icon:
   )
 }
 
-function PickCard({ pick, ticker }: { pick: Pick; ticker?: Ticker }) {
+function PickCard({
+  pick,
+  ticker,
+  history,
+  historyFailed,
+}: {
+  pick: Pick
+  ticker?: Ticker
+  history?: PricePoint[]
+  historyFailed: boolean
+}) {
   const buySoon = pick.signal === 'buy-soon'
   const change = ticker ? changeOf(ticker) : null
   return (
@@ -76,6 +94,8 @@ function PickCard({ pick, ticker }: { pick: Pick; ticker?: Ticker }) {
           </div>
         )}
       </div>
+
+      <BuzzChart symbol={pick.symbol} points={historyFailed ? (history ?? []) : history} />
 
       <p className="text-sm leading-relaxed text-pretty">{pick.thesis}</p>
 
@@ -133,6 +153,14 @@ export function BuzzPicks({ tickers }: { tickers: Ticker[] }) {
     dedupingInterval: 600_000,
   })
   const bySymbol = new Map(tickers.map((t) => [t.symbol, t]))
+  const symbols = data ? [...new Set(data.picks.map((p) => p.symbol))].join(',') : null
+  const history = useSWR(symbols ? `/api/picks/history?symbols=${encodeURIComponent(symbols)}` : null, fetchHistory, {
+    revalidateOnFocus: false,
+    dedupingInterval: 600_000,
+    errorRetryInterval: 65_000,
+    errorRetryCount: 3,
+  })
+  const historyFailed = Boolean(history.error && !history.data && !history.isValidating)
 
   return (
     <section aria-labelledby="buzz-heading" className="flex flex-col gap-6">
@@ -163,7 +191,13 @@ export function BuzzPicks({ tickers }: { tickers: Ticker[] }) {
       {data && (
         <div className="flex flex-col gap-4">
           {data.picks.map((pick, i) => (
-            <PickCard key={`${pick.symbol}-${i}`} pick={pick} ticker={bySymbol.get(pick.symbol)} />
+            <PickCard
+              key={`${pick.symbol}-${i}`}
+              pick={pick}
+              ticker={bySymbol.get(pick.symbol)}
+              history={history.data?.[pick.symbol]}
+              historyFailed={historyFailed || Boolean(history.data)}
+            />
           ))}
         </div>
       )}
