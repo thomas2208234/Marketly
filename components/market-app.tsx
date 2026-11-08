@@ -40,7 +40,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
             {errorMessage
               ? 'Quotes unavailable'
               : updatedAt
-                ? `Live · Finnhub · ${new Date(updatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+                ? `Live · Twelve Data · ${new Date(updatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
                 : 'Loading quotes'}
           </span>
         </header>
