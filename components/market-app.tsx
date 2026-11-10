@@ -7,6 +7,7 @@ import { useLiveTickers } from './use-live-tickers'
 import { Watchlist, type WatchlistItem } from './watchlist'
 import { SymbolDetail } from './symbol-detail'
 import { MarketTable } from './market-table'
+import { Logo } from './logo'
 import { NewsFeed } from './news-feed'
 import { BuzzPicks } from './buzz-picks'
 import { EarningsReport } from './earnings-report'
@@ -63,9 +64,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
     <div className="flex min-h-dvh flex-col">
       <header className="flex flex-col border-b bg-card">
         <div className="flex items-center justify-between gap-4 px-5 pt-4 md:px-8">
-          <span className="text-lg font-bold tracking-tight">
-            Market<span className="text-primary">ly</span>
-          </span>
+          <Logo />
           <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
             <span className={clsx('size-2 rounded-full', errorMessage ? 'bg-loss' : 'bg-gain')} aria-hidden="true" />
             {errorMessage
