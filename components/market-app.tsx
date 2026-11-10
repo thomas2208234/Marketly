@@ -9,8 +9,9 @@ import { SymbolDetail } from './symbol-detail'
 import { MarketTable } from './market-table'
 import { NewsFeed } from './news-feed'
 import { BuzzPicks } from './buzz-picks'
+import { EarningsReport } from './earnings-report'
 
-type Tab = 'buzz' | 'news' | 'watchlist'
+type Tab = 'buzz' | 'news' | 'earnings' | 'watchlist'
 
 type MarketAppProps = {
   initialTickers: Ticker[]
@@ -44,6 +45,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
   const tabs: { id: Tab; label: string }[] = [
     { id: 'buzz', label: 'Buzz picks' },
     { id: 'news', label: 'Stock news' },
+    { id: 'earnings', label: 'Earnings Report' },
     { id: 'watchlist', label: 'Watchlist' },
   ]
 
@@ -127,6 +129,16 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
         className="mx-auto w-full max-w-3xl px-5 py-6 md:px-8 md:py-8"
       >
         <NewsFeed symbols={watchlist} tickers={tickers} />
+      </main>
+
+      <main
+        id="panel-earnings"
+        role="tabpanel"
+        aria-labelledby="tab-earnings"
+        hidden={tab !== 'earnings'}
+        className="mx-auto w-full max-w-4xl px-5 py-6 md:px-8 md:py-8"
+      >
+        {tab === 'earnings' && <EarningsReport />}
       </main>
 
       <div
