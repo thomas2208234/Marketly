@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import clsx from 'clsx'
-import { ArrowUpRight, Clock, Globe, Play, TrendingUp, Music2 } from 'lucide-react'
+import { ArrowUpRight, Check, Clock, Globe, Play, Plus, TrendingUp, Music2 } from 'lucide-react'
 import { changeOf, formatSigned, type Ticker } from '@/lib/market'
 import { BuzzChart, type PricePoint } from './buzz-chart'
 
@@ -70,16 +70,36 @@ function PickCard({
   ticker,
   history,
   historyFailed,
+  watched,
+  onToggleWatch,
 }: {
   pick: Pick
   ticker?: Ticker
   history?: PricePoint[]
   historyFailed: boolean
+  watched: boolean
+  onToggleWatch: (symbol: string, name: string) => void
 }) {
   const buySoon = pick.signal === 'buy-soon'
   const change = ticker ? changeOf(ticker) : null
   return (
     <article className="flex flex-col gap-4 rounded-lg border bg-card p-5">
+      <button
+        type="button"
+        onClick={() => onToggleWatch(pick.symbol, pick.name)}
+        aria-pressed={watched}
+        className={clsx(
+          'flex h-9 items-center justify-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+          watched
+            ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15'
+            : 'border-primary bg-primary text-primary-foreground hover:bg-primary/90',
+        )}
+      >
+        {watched ? <Check className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+        {watched ? 'On your watchlist' : 'Add to watchlist'}
+        <span className="sr-only">{`: ${pick.symbol}`}</span>
+      </button>
+
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col">
           <h3 className="font-mono text-lg font-semibold">{pick.symbol}</h3>
@@ -147,7 +167,15 @@ function PickCard({
   )
 }
 
-export function BuzzPicks({ tickers }: { tickers: Ticker[] }) {
+export function BuzzPicks({
+  tickers,
+  watchlist,
+  onToggleWatch,
+}: {
+  tickers: Ticker[]
+  watchlist: string[]
+  onToggleWatch: (symbol: string, name: string) => void
+}) {
   const { data, error, isLoading } = useSWR('/api/picks', fetchPicks, {
     revalidateOnFocus: false,
     dedupingInterval: 600_000,
@@ -197,6 +225,8 @@ export function BuzzPicks({ tickers }: { tickers: Ticker[] }) {
               ticker={bySymbol.get(pick.symbol)}
               history={history.data?.[pick.symbol]}
               historyFailed={historyFailed || Boolean(history.data)}
+              watched={watchlist.includes(pick.symbol)}
+              onToggleWatch={onToggleWatch}
             />
           ))}
         </div>

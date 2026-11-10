@@ -21,20 +21,25 @@ type MarketAppProps = {
 export function MarketApp({ initialTickers, initialWatchlist, initialError }: MarketAppProps) {
   const { tickers, error, updatedAt } = useLiveTickers(initialTickers)
   const [watchlist, setWatchlist] = useState(initialWatchlist)
+  const [pickNames, setPickNames] = useState<Record<string, string>>({})
   const [tab, setTab] = useState<Tab>('buzz')
   const [selected, setSelected] = useState(initialWatchlist[0] ?? initialTickers[0]?.symbol ?? '')
   const errorMessage = error?.message ?? (tickers.length === 0 ? initialError : null)
 
   const bySymbol = new Map(tickers.map((t) => [t.symbol, t]))
   const watchedItems: WatchlistItem[] = watchlist.flatMap((symbol) => {
-    const meta = UNIVERSE.find((u) => u.symbol === symbol)
-    return meta ? [{ symbol, name: meta.name, ticker: bySymbol.get(symbol) }] : []
+    const name = UNIVERSE.find((u) => u.symbol === symbol)?.name ?? pickNames[symbol]
+    return name ? [{ symbol, name, ticker: bySymbol.get(symbol) }] : []
   })
   const selectedTicker = bySymbol.get(selected) ?? tickers[0]
 
   const add = (symbol: string) => setWatchlist((list) => (list.includes(symbol) ? list : [...list, symbol]))
   const remove = (symbol: string) => setWatchlist((list) => list.filter((s) => s !== symbol))
   const toggle = (symbol: string) => (watchlist.includes(symbol) ? remove(symbol) : add(symbol))
+  const togglePick = (symbol: string, name: string) => {
+    setPickNames((names) => (names[symbol] ? names : { ...names, [symbol]: name }))
+    toggle(symbol)
+  }
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'buzz', label: 'Buzz picks' },
@@ -111,7 +116,7 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
         hidden={tab !== 'buzz'}
         className="mx-auto w-full max-w-3xl px-5 py-6 md:px-8 md:py-8"
       >
-        <BuzzPicks tickers={tickers} />
+        <BuzzPicks tickers={tickers} watchlist={watchlist} onToggleWatch={togglePick} />
       </main>
 
       <main
