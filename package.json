@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@vercel/blob": "^2.9.0",
     "ai": "^7.0.165",
     "clsx": "^2.1.1",
     "lucide-react": "^1.70.0",
