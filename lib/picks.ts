@@ -1,4 +1,5 @@
 import 'server-only'
+import { get, put } from '@vercel/blob'
 import { gateway, generateText, isStepCount, Output } from 'ai'
 import { z } from 'zod'
 
@@ -35,7 +36,7 @@ const pickSchema = z.object({
     .array(
       z.object({
         removed: z.string().describe('Ticker dropped from the previous list'),
-        added: z.string().optional().describe('Ticker that replaced it, if any'),
+        added: z.string().nullable().describe('Ticker that replaced it, or null if none'),
         reason: z.string().describe('The concrete reason the swap was justified'),
       }),
     )
@@ -44,7 +45,8 @@ const pickSchema = z.object({
 
 export type PicksReport = z.infer<typeof pickSchema>
 
-const TTL_MS = 30 * 60_000
+const STORE_PATH = 'picks/latest.json'
+const MEMORY_TTL_MS = 5 * 60_000
 let cached: { report: PicksReport; at: number } | null = null
 let inflight: Promise<PicksReport> | null = null
 
@@ -102,20 +104,48 @@ ${describePrevious(previous)}`,
   return output
 }
 
+async function readStored(): Promise<PicksReport | null> {
+  try {
+    const result = await get(STORE_PATH, { access: 'private', useCache: false })
+    if (!result || result.statusCode !== 200) return null
+    return pickSchema.parse(await new Response(result.stream).json())
+  } catch (error) {
+    console.error('[picks] Could not read stored picks:', error)
+    return null
+  }
+}
+
+async function store(report: PicksReport) {
+  await put(STORE_PATH, JSON.stringify(report), {
+    access: 'private',
+    allowOverwrite: true,
+    addRandomSuffix: false,
+    contentType: 'application/json',
+  })
+  cached = { report, at: Date.now() }
+}
+
 export async function getPicks(): Promise<PicksReport> {
-  if (cached && Date.now() - cached.at < TTL_MS) return cached.report
-  const previous = cached?.report ?? null
-  inflight ??= generateReport(previous)
-    .then((report) => {
-      cached = { report, at: Date.now() }
+  if (cached && Date.now() - cached.at < MEMORY_TTL_MS) return cached.report
+  const stored = await readStored()
+  if (stored) {
+    cached = { report: stored, at: Date.now() }
+    return stored
+  }
+  inflight ??= generateReport(null)
+    .then(async (report) => {
+      await store(report)
       return report
-    })
-    .catch((error) => {
-      if (previous) return previous
-      throw error
     })
     .finally(() => {
       inflight = null
     })
   return inflight
+}
+
+export async function refreshPicks(): Promise<PicksReport> {
+  const previous = await readStored()
+  const report = await generateReport(previous)
+  await store(report)
+  return report
 }
