@@ -1,6 +1,9 @@
 import { getHistory, HistoryError, sanitizeSymbols } from '@/lib/history'
+import { getSession, unauthorized } from '@/lib/session'
 
 export async function GET(request: Request) {
+  if (!(await getSession())?.user) return unauthorized()
+
   const symbols = sanitizeSymbols(new URL(request.url).searchParams.get('symbols'))
   if (symbols.length === 0) return Response.json({ history: {} })
 

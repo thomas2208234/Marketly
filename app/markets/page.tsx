@@ -1,17 +1,18 @@
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { MarketApp } from '@/components/market-app'
 import { AccountMenu } from '@/components/account-menu'
-import { auth } from '@/lib/auth'
 import { DEFAULT_WATCHLIST, type Ticker } from '@/lib/market'
 import { getQuotes, QuotesError } from '@/lib/quotes'
+import { getSession } from '@/lib/session'
 
 export const metadata: Metadata = {
   title: 'Markets — Marketly',
 }
 
 export default async function MarketsPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getSession()
+  if (!session?.user) redirect('/sign-in')
 
   let tickers: Ticker[] = []
   let error: string | null = null
@@ -26,7 +27,7 @@ export default async function MarketsPage() {
       initialTickers={tickers}
       initialWatchlist={DEFAULT_WATCHLIST}
       initialError={error}
-      account={<AccountMenu user={session?.user ? { name: session.user.name, email: session.user.email } : null} />}
+      account={<AccountMenu user={{ name: session.user.name, email: session.user.email }} />}
     />
   )
 }
