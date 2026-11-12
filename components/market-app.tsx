@@ -18,9 +18,10 @@ type MarketAppProps = {
   initialTickers: Ticker[]
   initialWatchlist: string[]
   initialError: string | null
+  account?: React.ReactNode
 }
 
-export function MarketApp({ initialTickers, initialWatchlist, initialError }: MarketAppProps) {
+export function MarketApp({ initialTickers, initialWatchlist, initialError, account }: MarketAppProps) {
   const { tickers, error, updatedAt } = useLiveTickers(initialTickers)
   const [watchlist, setWatchlist] = useState(initialWatchlist)
   const [pickNames, setPickNames] = useState<Record<string, string>>({})
@@ -64,7 +65,10 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
     <div className="flex min-h-dvh flex-col">
       <header className="flex flex-col border-b bg-card">
         <div className="flex items-center justify-between gap-4 px-5 pt-4 md:px-8">
-          <Logo />
+          <a href="/" aria-label="Marketly home">
+            <Logo />
+          </a>
+          <div className="flex items-center gap-5">
           <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
             <span className={clsx('size-2 rounded-full', errorMessage ? 'bg-loss' : 'bg-gain')} aria-hidden="true" />
             {errorMessage
@@ -73,6 +77,8 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError }: Ma
                 ? `Live · ${new Date(updatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
                 : 'Loading quotes'}
           </span>
+          {account}
+          </div>
         </div>
         <div role="tablist" aria-label="Marketly sections" className="flex gap-6 px-5 md:px-8" onKeyDown={onTabKeyDown}>
           {tabs.map((t) => {
