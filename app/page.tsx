@@ -1,15 +1,10 @@
-import { MarketApp } from '@/components/market-app'
-import { DEFAULT_WATCHLIST, type Ticker } from '@/lib/market'
-import { getQuotes, QuotesError } from '@/lib/quotes'
+import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { Landing } from '@/components/landing'
+import { auth } from '@/lib/auth'
 
 export default async function Page() {
-  let tickers: Ticker[] = []
-  let error: string | null = null
-  try {
-    tickers = await getQuotes()
-  } catch (e) {
-    error = e instanceof QuotesError ? e.message : 'Could not load quotes.'
-  }
-
-  return <MarketApp initialTickers={tickers} initialWatchlist={DEFAULT_WATCHLIST} initialError={error} />
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (session?.user) redirect('/markets')
+  return <Landing />
 }
