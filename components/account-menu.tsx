@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 
 type AccountMenuProps = {
-  user: { name: string; email: string } | null
+  user: { name: string; email: string }
 }
 
 export function AccountMenu({ user }: AccountMenuProps) {
@@ -18,25 +17,6 @@ export function AccountMenu({ user }: AccountMenuProps) {
     await authClient.signOut()
     router.push('/')
     router.refresh()
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center gap-3 text-sm">
-        <span className="hidden rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground sm:inline">
-          Guest
-        </span>
-        <Link href="/sign-in" className="font-medium text-muted-foreground hover:text-foreground">
-          Log in
-        </Link>
-        <Link
-          href="/sign-up"
-          className="rounded-lg bg-primary px-3 py-1.5 font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Sign up
-        </Link>
-      </div>
-    )
   }
 
   const initial = (user.name || user.email).charAt(0).toUpperCase()

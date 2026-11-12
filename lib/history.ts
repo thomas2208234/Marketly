@@ -1,5 +1,14 @@
 import 'server-only'
-import { available, releasePriority, requestPriority, spend } from './credits'
+import {
+  available,
+  blockTwelveData,
+  isDailyLimitMessage,
+  isTwelveDataBlocked,
+  releasePriority,
+  requestPriority,
+  spend,
+} from './credits'
+import { fetchYahooDaily } from './yahoo'
 
 export type PricePoint = { date: string; close: number }
 
@@ -18,6 +27,11 @@ const cache = new Map<string, { at: number; points: PricePoint[] }>()
 
 function isError(value: unknown): value is TwelveDataError {
   return typeof value === 'object' && value !== null && (value as TwelveDataError).status === 'error'
+}
+
+function isFresh(symbol: string) {
+  const hit = cache.get(symbol)
+  return !!hit && Date.now() - hit.at <= TTL_MS
 }
 
 function toPoints(series: TimeSeries): PricePoint[] {
@@ -39,12 +53,16 @@ export function sanitizeSymbols(raw: string | null): string[] {
 async function fetchSeries(symbols: string[], apiKey: string) {
   const url = `https://api.twelvedata.com/time_series?symbol=${symbols.map(encodeURIComponent).join(',')}&interval=1day&outputsize=${DAYS}&apikey=${apiKey}`
   const res = await fetch(url, { cache: 'no-store' })
-  if (res.status === 429) throw new HistoryError('Twelve Data credit limit reached. Retrying shortly.')
+  if (res.status === 429) {
+    blockTwelveData(false)
+    throw new HistoryError('Twelve Data credit limit reached.')
+  }
   if (!res.ok) throw new HistoryError(`Twelve Data request failed (${res.status}).`)
 
   const body: unknown = await res.json()
   if (isError(body)) {
-    throw new HistoryError(body.code === 429 ? 'Twelve Data credit limit reached. Retrying shortly.' : body.message)
+    if (body.code === 429) blockTwelveData(isDailyLimitMessage(body.message))
+    throw new HistoryError(body.message)
   }
 
   const entries = symbols.length === 1 ? { [symbols[0]]: body } : (body as Record<string, unknown>)
@@ -55,36 +73,35 @@ async function fetchSeries(symbols: string[], apiKey: string) {
   }
 }
 
+async function fetchFromFallback(symbols: string[]) {
+  const results = await Promise.allSettled(symbols.map((s) => fetchYahooDaily(s)))
+  const now = Date.now()
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') cache.set(symbols[i], { at: now, points: result.value.candles.slice(-DAYS) })
+  })
+}
+
 export async function getHistory(symbols: string[]): Promise<Record<string, PricePoint[]>> {
   const apiKey = process.env.TWELVE_DATA_API_KEY
-  if (!apiKey) throw new HistoryError('TWELVE_DATA_API_KEY is not set.')
+  const stale = symbols.filter((s) => !isFresh(s))
 
-  const stale = symbols.filter((s) => {
-    const hit = cache.get(s)
-    return !hit || Date.now() - hit.at > TTL_MS
-  })
-
-  if (stale.length > 0) {
+  if (stale.length > 0 && apiKey && !isTwelveDataBlocked()) {
     requestPriority()
-    const budget = available()
-    if (budget <= 0) {
-      if (!symbols.some((s) => cache.has(s))) throw new HistoryError('Twelve Data credit limit reached. Retrying shortly.')
-      return pick(symbols)
-    }
-    const batch = stale.slice(0, budget)
-    try {
-      spend(batch.length)
-      await fetchSeries(batch, apiKey)
-      if (batch.length === stale.length) releasePriority()
-    } catch (error) {
-      if (!symbols.some((s) => cache.has(s))) throw error
-      console.error('[history] Serving cached history after refresh failure:', error)
+    const batch = stale.slice(0, Math.max(0, available()))
+    if (batch.length > 0) {
+      try {
+        spend(batch.length)
+        await fetchSeries(batch, apiKey)
+      } catch (error) {
+        console.error('[history] Twelve Data refresh failed, using fallback source:', error)
+      }
     }
   }
 
-  return pick(symbols)
-}
+  const remaining = symbols.filter((s) => !isFresh(s))
+  if (remaining.length > 0) await fetchFromFallback(remaining)
+  if (symbols.every(isFresh)) releasePriority()
 
-function pick(symbols: string[]): Record<string, PricePoint[]> {
+  if (!symbols.some((s) => cache.has(s))) throw new HistoryError('Price history is temporarily unavailable.')
   return Object.fromEntries(symbols.flatMap((s) => (cache.has(s) ? [[s, cache.get(s)!.points]] : [])))
 }

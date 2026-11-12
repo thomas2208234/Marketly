@@ -32,3 +32,19 @@ export function releasePriority() {
 export function isPriorityHeld() {
   return Date.now() < priorityUntil
 }
+
+// After Twelve Data refuses a request for credits, stop calling it for a while
+// (longer once the daily quota is gone) and let callers use the fallback source.
+let blockedUntil = 0
+
+export function blockTwelveData(daily: boolean) {
+  blockedUntil = Date.now() + (daily ? 60 : 2) * 60_000
+}
+
+export function isTwelveDataBlocked() {
+  return Date.now() < blockedUntil
+}
+
+export function isDailyLimitMessage(message: string) {
+  return /for the day|daily/i.test(message)
+}

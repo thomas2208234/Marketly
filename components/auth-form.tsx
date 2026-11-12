@@ -135,8 +135,8 @@ export function AuthForm({ mode }: AuthFormProps) {
               {isSignUp ? 'Log in' : 'Sign up'}
             </Link>
           </p>
-          <Link href="/markets" className="hover:text-foreground hover:underline">
-            Continue as guest
+          <Link href="/" className="hover:text-foreground hover:underline">
+            Back to home
           </Link>
         </div>
       </div>

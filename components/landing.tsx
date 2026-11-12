@@ -49,12 +49,6 @@ export function Landing() {
             >
               Login
             </Link>
-            <Link
-              href="/markets"
-              className="px-2 py-3 text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Continue as Guest
-            </Link>
           </div>
         </section>
 
