@@ -21,6 +21,7 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
     minPasswordLength: 8,
+    maxPasswordLength: 128,
   },
   trustedOrigins: (request) => [
     ...(process.env.NODE_ENV === 'development'
@@ -30,6 +31,10 @@ export const auth = betterAuth({
           ...(process.env.V0_DEV_APP_URL ? [process.env.V0_DEV_APP_URL] : []),
           ...(process.env.V0_BUILD_URL ? [process.env.V0_BUILD_URL] : []),
           ...(process.env.V0_SANDBOX_URL ? [process.env.V0_SANDBOX_URL] : []),
+          // The v0 preview proxy may forward Host as localhost, so the
+          // request-host check below cannot match the browser's Origin.
+          'https://*.v0.build',
+          'https://*.vusercontent.net',
           // The v0 preview URL is not always exposed as an env var, so in
           // development also trust the exact host this request was sent to.
           // This is a same-origin check: a cross-site Origin never matches it.
