@@ -39,9 +39,14 @@ export const auth = betterAuth({
     ...(process.env.NODE_ENV === 'production'
       ? [
           ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+          ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
           ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
             ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
             : []),
+          // Vercel serves each deployment at several *.vercel.app aliases.
+          // Trusting the exact host the request was sent to keeps sign-up
+          // working on all of them while still rejecting cross-site origins.
+          ...requestHostOrigin(request),
         ]
       : []),
   ],
