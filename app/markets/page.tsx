@@ -27,7 +27,15 @@ export default async function MarketsPage() {
       initialTickers={tickers}
       initialWatchlist={DEFAULT_WATCHLIST}
       initialError={error}
-      account={<AccountMenu user={{ name: session.user.name, email: session.user.email }} />}
+      account={
+        <AccountMenu
+          user={{
+            name: session.user.name,
+            email: session.user.email,
+            isGuest: Boolean(session.user.isAnonymous),
+          }}
+        />
+      }
     />
   )
 }

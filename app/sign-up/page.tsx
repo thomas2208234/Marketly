@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 
 export default async function SignUpPage() {
   const session = await getSession()
-  if (session?.user) redirect('/markets')
+  if (session?.user && !session.user.isAnonymous) redirect('/markets')
   return <AuthForm mode="sign-up" />
 }
