@@ -14,6 +14,23 @@ type AuthFormProps = {
 const inputClass =
   'w-full rounded-lg border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25'
 
+function describeAuthError(error: { code?: string; message?: string; status?: number }, isSignUp: boolean) {
+  const code = error.code ?? ''
+  if (code.includes('USER_ALREADY_EXISTS') || code.includes('EMAIL_ALREADY'))
+    return 'An account with this email already exists. Log in instead.'
+  if (code.includes('INVALID_EMAIL_OR_PASSWORD')) return 'Incorrect email or password.'
+  if (code.includes('INVALID_EMAIL')) return 'Enter a valid email address.'
+  if (code.includes('PASSWORD_TOO_SHORT')) return 'Password must be at least 8 characters.'
+  if (code.includes('PASSWORD_TOO_LONG')) return 'Password is too long.'
+  if (code.includes('ORIGIN') || error.status === 403)
+    return 'This page’s address isn’t allowed to sign in. Open Marketly at marketly-theta-five.vercel.app and try again.'
+  if (error.status === 429) return 'Too many attempts. Wait a minute and try again.'
+  const detail = error.message ? ` (${error.message})` : ''
+  return isSignUp
+    ? `We couldn’t create your account${detail}. Please try again.`
+    : `We couldn’t log you in${detail}. Please try again.`
+}
+
 export function AuthForm({ mode, guestActive = false }: AuthFormProps) {
   const router = useRouter()
   const isSignUp = mode === 'sign-up'
@@ -50,17 +67,20 @@ export function AuthForm({ mode, guestActive = false }: AuthFormProps) {
     }
 
     setPending(true)
-    const { error } = isSignUp
-      ? await authClient.signUp.email({ email, password, name })
-      : await authClient.signIn.email({ email, password })
-
-    if (error) {
+    let result: Awaited<ReturnType<typeof authClient.signIn.email>>
+    try {
+      result = isSignUp
+        ? await authClient.signUp.email({ email, password, name })
+        : await authClient.signIn.email({ email, password })
+    } catch {
       setPending(false)
-      setError(
-        isSignUp
-          ? 'We couldn’t create your account. Check your details and try again.'
-          : 'Incorrect email or password.',
-      )
+      setError('Couldn’t reach Marketly. Check your connection and try again.')
+      return
+    }
+
+    if (result.error) {
+      setPending(false)
+      setError(describeAuthError(result.error, isSignUp))
       return
     }
 
