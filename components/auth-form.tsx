@@ -8,16 +8,33 @@ import { Logo } from './logo'
 
 type AuthFormProps = {
   mode: 'sign-in' | 'sign-up'
+  guestActive?: boolean
 }
 
 const inputClass =
   'w-full rounded-lg border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25'
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, guestActive = false }: AuthFormProps) {
   const router = useRouter()
   const isSignUp = mode === 'sign-up'
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [guestPending, setGuestPending] = useState(false)
+
+  async function handleGuest() {
+    setError(null)
+    if (!guestActive) {
+      setGuestPending(true)
+      const { error } = await authClient.signIn.anonymous()
+      if (error) {
+        setGuestPending(false)
+        setError('We couldn’t start a guest session. Please try again.')
+        return
+      }
+    }
+    router.push('/markets')
+    router.refresh()
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -120,12 +137,30 @@ export function AuthForm({ mode }: AuthFormProps) {
 
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || guestPending}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
               {pending ? (isSignUp ? 'Creating account…' : 'Logging in…') : isSignUp ? 'Sign up' : 'Log in'}
             </button>
           </form>
+
+          {!isSignUp && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <button
+                type="button"
+                onClick={handleGuest}
+                disabled={pending || guestPending}
+                className="rounded-lg border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
+              >
+                {guestPending ? 'Starting guest session…' : 'Continue as guest'}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">

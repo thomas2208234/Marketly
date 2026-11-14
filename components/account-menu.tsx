@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 
 type AccountMenuProps = {
-  user: { name: string; email: string }
+  user: { name: string; email: string; isGuest: boolean }
 }
 
 export function AccountMenu({ user }: AccountMenuProps) {
@@ -19,7 +20,8 @@ export function AccountMenu({ user }: AccountMenuProps) {
     router.refresh()
   }
 
-  const initial = (user.name || user.email).charAt(0).toUpperCase()
+  const label = user.isGuest ? 'Guest' : user.name || user.email
+  const initial = label.charAt(0).toUpperCase()
 
   return (
     <div className="flex items-center gap-3 text-sm">
@@ -30,15 +32,23 @@ export function AccountMenu({ user }: AccountMenuProps) {
         >
           {initial}
         </span>
-        <span className="hidden max-w-40 truncate font-medium text-foreground sm:inline">{user.name || user.email}</span>
+        <span className="hidden max-w-40 truncate font-medium text-foreground sm:inline">{label}</span>
       </span>
+      {user.isGuest && (
+        <Link
+          href="/sign-up"
+          className="rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          Create account
+        </Link>
+      )}
       <button
         type="button"
         onClick={handleSignOut}
         disabled={pending}
         className="rounded-lg border px-3 py-1.5 font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
       >
-        {pending ? 'Signing out…' : 'Sign out'}
+        {pending ? (user.isGuest ? 'Exiting…' : 'Signing out…') : user.isGuest ? 'Exit guest' : 'Sign out'}
       </button>
     </div>
   )

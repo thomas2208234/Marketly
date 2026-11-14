@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 
 export default async function SignInPage() {
   const session = await getSession()
-  if (session?.user) redirect('/markets')
-  return <AuthForm mode="sign-in" />
+  const isGuest = Boolean(session?.user.isAnonymous)
+  if (session?.user && !isGuest) redirect('/markets')
+  return <AuthForm mode="sign-in" guestActive={isGuest} />
 }

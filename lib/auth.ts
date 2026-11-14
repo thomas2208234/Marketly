@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { anonymous } from 'better-auth/plugins'
 import { pool } from '@/lib/db'
 
 function requestHostOrigin(request?: Request): string[] {
@@ -48,6 +49,7 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
   },
+  plugins: [anonymous({ emailDomainName: 'guest.marketly.app' })],
   ...(process.env.NODE_ENV === 'development'
     ? {
         advanced: {
