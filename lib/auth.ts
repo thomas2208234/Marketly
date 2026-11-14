@@ -1,6 +1,12 @@
 import { betterAuth } from 'better-auth'
 import { pool } from '@/lib/db'
 
+function requestHostOrigin(request?: Request): string[] {
+  const host = request?.headers.get('x-forwarded-host') ?? request?.headers.get('host')
+  if (!host || !/^[a-z0-9.-]+(:\d+)?$/i.test(host)) return []
+  return [`https://${host}`]
+}
+
 export const auth = betterAuth({
   database: pool,
   baseURL:
@@ -15,7 +21,7 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 8,
   },
-  trustedOrigins: [
+  trustedOrigins: (request) => [
     ...(process.env.NODE_ENV === 'development'
       ? [
           'http://localhost:3000',
@@ -23,6 +29,10 @@ export const auth = betterAuth({
           ...(process.env.V0_DEV_APP_URL ? [process.env.V0_DEV_APP_URL] : []),
           ...(process.env.V0_BUILD_URL ? [process.env.V0_BUILD_URL] : []),
           ...(process.env.V0_SANDBOX_URL ? [process.env.V0_SANDBOX_URL] : []),
+          // The v0 preview URL is not always exposed as an env var, so in
+          // development also trust the exact host this request was sent to.
+          // This is a same-origin check: a cross-site Origin never matches it.
+          ...requestHostOrigin(request),
         ]
       : []),
     ...(process.env.NODE_ENV === 'production'
