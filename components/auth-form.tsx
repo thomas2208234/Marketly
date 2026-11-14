@@ -14,7 +14,11 @@ type AuthFormProps = {
 const inputClass =
   'w-full rounded-lg border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25'
 
-function describeAuthError(error: { code?: string; message?: string; status?: number }, isSignUp: boolean) {
+function describeAuthError(
+  error: { code?: string; message?: string; status?: number; statusText?: string },
+  isSignUp: boolean,
+) {
+  console.warn('[auth] request failed', { status: error.status, code: error.code, message: error.message })
   const code = error.code ?? ''
   if (code.includes('USER_ALREADY_EXISTS') || code.includes('EMAIL_ALREADY'))
     return 'An account with this email already exists. Log in instead.'
@@ -25,7 +29,12 @@ function describeAuthError(error: { code?: string; message?: string; status?: nu
   if (code.includes('ORIGIN') || error.status === 403)
     return 'This page’s address isn’t allowed to sign in. Open Marketly at marketly-theta-five.vercel.app and try again.'
   if (error.status === 429) return 'Too many attempts. Wait a minute and try again.'
-  const detail = error.message ? ` (${error.message})` : ''
+  if (error.status === 401 && !error.message)
+    return 'Your preview session expired. Reload the page, or open Marketly at marketly-theta-five.vercel.app.'
+  if (error.status && error.status >= 500)
+    return `Marketly’s server hit an error (code ${error.status}). Please try again in a moment.`
+  const reason = error.message || (error.status ? `code ${error.status}${error.statusText ? ` ${error.statusText}` : ''}` : '')
+  const detail = reason ? ` (${reason})` : ''
   return isSignUp
     ? `We couldn’t create your account${detail}. Please try again.`
     : `We couldn’t log you in${detail}. Please try again.`
