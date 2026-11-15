@@ -13,6 +13,25 @@ type AuthFormProps = {
 const inputClass =
   'w-full rounded-lg border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25'
 
+type AuthError = { code?: string; status?: number }
+
+function signUpErrorMessage({ code, status }: AuthError): string {
+  if (code?.startsWith('USER_ALREADY_EXISTS')) {
+    return 'An account with this email already exists. Try logging in instead.'
+  }
+  if (code === 'INVALID_EMAIL') return 'Enter a valid email address.'
+  if (code === 'PASSWORD_TOO_SHORT') return 'Password must be at least 8 characters.'
+  if (code === 'PASSWORD_TOO_LONG') return 'Password must be 128 characters or fewer.'
+  if (status === 429) return 'Too many attempts. Wait a minute and try again.'
+  return 'We couldn’t create your account. Check your connection and try again.'
+}
+
+function signInErrorMessage({ status }: AuthError): string {
+  if (status === 429) return 'Too many attempts. Wait a minute and try again.'
+  if (status === 401 || status === 400) return 'Incorrect email or password.'
+  return 'We couldn’t log you in. Check your connection and try again.'
+}
+
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
   const isSignUp = mode === 'sign-up'
@@ -39,11 +58,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     if (error) {
       setPending(false)
-      setError(
-        isSignUp
-          ? 'We couldn’t create your account. Check your details and try again.'
-          : 'Incorrect email or password.',
-      )
+      console.error('Auth request failed', error)
+      setError(isSignUp ? signUpErrorMessage(error) : signInErrorMessage(error))
       return
     }
 
