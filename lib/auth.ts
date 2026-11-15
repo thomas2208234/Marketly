@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { anonymous } from 'better-auth/plugins'
 import { pool } from '@/lib/db'
 
 function requestHostOrigin(request?: Request): string[] {
@@ -20,6 +21,7 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
     minPasswordLength: 8,
+    maxPasswordLength: 128,
   },
   trustedOrigins: (request) => [
     ...(process.env.NODE_ENV === 'development'
@@ -29,6 +31,10 @@ export const auth = betterAuth({
           ...(process.env.V0_DEV_APP_URL ? [process.env.V0_DEV_APP_URL] : []),
           ...(process.env.V0_BUILD_URL ? [process.env.V0_BUILD_URL] : []),
           ...(process.env.V0_SANDBOX_URL ? [process.env.V0_SANDBOX_URL] : []),
+          // The v0 preview proxy may forward Host as localhost, so the
+          // request-host check below cannot match the browser's Origin.
+          'https://*.v0.build',
+          'https://*.vusercontent.net',
           // The v0 preview URL is not always exposed as an env var, so in
           // development also trust the exact host this request was sent to.
           // This is a same-origin check: a cross-site Origin never matches it.
@@ -38,9 +44,14 @@ export const auth = betterAuth({
     ...(process.env.NODE_ENV === 'production'
       ? [
           ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+          ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
           ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
             ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
             : []),
+          // Vercel serves each deployment at several *.vercel.app aliases.
+          // Trusting the exact host the request was sent to keeps sign-up
+          // working on all of them while still rejecting cross-site origins.
+          ...requestHostOrigin(request),
         ]
       : []),
   ],
@@ -48,6 +59,7 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
   },
+  plugins: [anonymous({ emailDomainName: 'guest.marketly.app' })],
   ...(process.env.NODE_ENV === 'development'
     ? {
         advanced: {
