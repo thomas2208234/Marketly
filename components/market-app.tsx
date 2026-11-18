@@ -10,6 +10,7 @@ import { MarketTable } from './market-table'
 import { Logo } from './logo'
 import { NewsFeed } from './news-feed'
 import { BuzzPicks } from './buzz-picks'
+import { StockLookup } from './stock-lookup'
 import { EarningsReport } from './earnings-report'
 
 type Tab = 'buzz' | 'news' | 'earnings' | 'watchlist'
@@ -121,8 +122,9 @@ export function MarketApp({ initialTickers, initialWatchlist, initialError, acco
         role="tabpanel"
         aria-labelledby="tab-buzz"
         hidden={tab !== 'buzz'}
-        className="mx-auto w-full max-w-3xl px-5 py-6 md:px-8 md:py-8"
+        className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-5 py-6 md:px-8 md:py-8"
       >
+        <StockLookup />
         <BuzzPicks tickers={tickers} watchlist={watchlist} onToggleWatch={togglePick} />
       </main>
 
