@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import clsx from 'clsx'
-import { ArrowUpRight, Check, Clock, Globe, Play, Plus, TrendingUp, Music2 } from 'lucide-react'
+import { ArrowUpRight, Check, Clock, Globe, Loader2, Play, Plus, TrendingUp, Music2 } from 'lucide-react'
 import { changeOf, formatSigned, type Ticker } from '@/lib/market'
 import { BuzzChart, type PricePoint } from './buzz-chart'
 
@@ -203,7 +203,15 @@ export function BuzzPicks({
 
       {isLoading && (
         <div className="flex flex-col gap-4" aria-live="polite">
-          <p className="text-sm text-muted-foreground">Searching the web, YouTube, and TikTok. This can take up to a minute.</p>
+          <div role="status" className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <Loader2 className="size-5 animate-spin text-primary" aria-hidden="true" />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Loading buzz picks</span>
+              <span className="text-xs leading-relaxed text-muted-foreground">
+                Searching the web, YouTube, and TikTok. This can take up to a minute.
+              </span>
+            </div>
+          </div>
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-56 animate-pulse rounded-lg border bg-card" />
           ))}
