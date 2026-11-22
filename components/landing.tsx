@@ -14,9 +14,14 @@ export function Landing() {
       <header className="border-b bg-card">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-4 md:px-8">
           <Logo />
-          <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-            Log in
-          </Link>
+          <nav aria-label="Main" className="flex items-center gap-5 text-sm font-medium">
+            <Link href="/stocks" className="text-muted-foreground hover:text-foreground">
+              Stocks
+            </Link>
+            <Link href="/sign-in" className="text-muted-foreground hover:text-foreground">
+              Log in
+            </Link>
+          </nav>
         </div>
       </header>
 
