@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { SITE_URL } from '@/lib/site'
 import './globals.css'
 
 const plexSans = IBM_Plex_Sans({
@@ -15,6 +16,7 @@ const plexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Marketly — Markets & Watchlist',
   description: 'Track the market and keep your favorite tickers in a live watchlist.',
 }
